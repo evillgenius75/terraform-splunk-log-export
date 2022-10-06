@@ -59,7 +59,9 @@ resource "google_dataflow_job" "dataflow_job" {
     inputSubscription = google_pubsub_subscription.dataflow_input_pubsub_subscription.id
     outputDeadletterTopic = google_pubsub_topic.dataflow_deadletter_pubsub_topic.id
     url       = var.splunk_hec_url
-    token     = var.splunk_hec_token
+    # token     = var.splunk_hec_token #Not needed if token source is SECRET_MANAGER only PLAINTEXT and KMS
+    tokenSource = "SECRET_MANAGER"
+    tokenSecretId = local.token_secret_id
     parallelism = var.dataflow_job_parallelism
     batchCount = var.dataflow_job_batch_count
     includePubsubMessage = local.dataflow_job_include_pubsub_message
@@ -74,7 +76,7 @@ resource "google_dataflow_job" "dataflow_job" {
     } : {})
   region = var.region
   network = var.network
-  subnetwork = "regions/${var.region}/subnetworks/${local.subnet_name}"
+  subnetwork = "https://www.googleapis.com/compute/v1/projects/${var.host_project}/regions/${var.region}/subnetworks/${local.subnet_name}"
   ip_configuration = "WORKER_IP_PRIVATE"
 
   depends_on = [

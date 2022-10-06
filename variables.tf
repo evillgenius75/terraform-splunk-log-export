@@ -16,6 +16,10 @@ variable "project" {
   description = "Project for Dataflow job deployment"
 }
 
+variable "host_project" {
+  description = "The name of the host project that owns the shared VPC"
+}
+
 variable "region" {
   description = "Region to deploy regional-resources into. This must match subnet's region if deploying into existing network (e.g. Shared VPC)"
 }
@@ -37,7 +41,7 @@ variable "subnet" {
 
 variable "primary_subnet_cidr" {
   type        = string
-  description = "The CIDR Range of the primary subnet"
+  description = "The CIDR Range of the primary subnet. Only used if creating a new network"
   default     = "10.128.0.0/20"
 }
 
@@ -65,10 +69,10 @@ variable "splunk_hec_url" {
   }
 }
 
-variable "splunk_hec_token" {
-  description = "Splunk HEC token"
-  sensitive = true
-}
+#variable "splunk_hec_token" {
+#  description = "Splunk HEC token"
+#  sensitive = true
+#}
 
 # Dataflow job parameters
 
@@ -125,10 +129,29 @@ variable "dataflow_job_disable_certificate_validation" {
 
 variable "dataflow_job_udf_gcs_path" {
   description = "[Optional Dataflow UDF] GCS path for JavaScript file (default: '')"
-  default = ""
+  default = "gs://splk-public/js/dataflow_udf_messages_replay.js"
 }
 
 variable "dataflow_job_udf_function_name" {
   description = "[Optional Dataflow UDF] Name of JavaScript function to be called (default: '')"
-  default = ""
+  default = "process"
+}
+
+variable "secret_name" {
+  description = "The name or the secret holding the HEC token data"
+  type = string
+}
+
+variable "secret_version" {
+  description = "The specific version of the secret that holds the HEC token. Will default to latest"
+  type = string
+  default = "lastest"
+}
+
+variable "folder_id" {
+  description = "The unique folder ID (not the folder name but the number identifier created by GCP) that you want to sink "
+}
+
+variable "org_id" {
+  description = "The unique organization ID (not the Organization name but the number identifier created by GCP) that you want to enable a log sink for"
 }

@@ -17,7 +17,8 @@ resource "google_pubsub_topic_iam_binding" "input_sub_publisher" {
   topic = google_pubsub_topic.dataflow_input_pubsub_topic.name
   role = "roles/pubsub.publisher"
   members = [
-    google_logging_project_sink.project_log_sink.writer_identity
+    google_logging_folder_sink.folder_log_sink.writer_identity,
+    google_logging_organization_sink.organization_log_sink.writer_identity
   ]
 }
 
@@ -63,6 +64,29 @@ resource "google_project_iam_binding" "dataflow_worker_role" {
     "serviceAccount:${local.dataflow_worker_service_account}"
   ]
 }
+
+# Add google_compute_subnetwork_iam_member stanza here to add user-assigned service account and also Dataflow Service Account
+resource "google_compute_subnetwork_iam_binding" "df-iam-sharedvpc" {
+  project = var.host_project
+  region = var.region
+  subnetwork = var.subnet
+  role = "roles/compute.networkUser"
+  members = [
+    "serviceAccount:${local.dataflow_service_service_account}",
+    "serviceAccount:${local.dataflow_worker_service_account}",
+    ]
+}
+
+# So dataflow worker can access the secret for the HEC token
+resource "google_secret_manager_secret_iam_binding" "binding" {
+  project = var.project
+  secret_id = var.secret_name
+  role = "roles/secretmanager.secretAccessor"
+  members = [
+    "serviceAccount:${local.dataflow_worker_service_account}",
+  ]
+}
+
 
 # To deploy Dataflow jobs, terraform caller identity must have permission to impersonate
 # worker service account in order to attach that service account to Compute Engine VMs.

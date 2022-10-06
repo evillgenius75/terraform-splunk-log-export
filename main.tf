@@ -45,7 +45,7 @@ locals {
 
   dataflow_splunk_template_gcs_path = "gs://dataflow-templates/${var.dataflow_template_version}/Cloud_PubSub_to_Splunk"
   dataflow_pubsub_template_gcs_path = "gs://dataflow-templates/${var.dataflow_template_version}/Cloud_PubSub_to_Cloud_PubSub"
-
+  dataflow_service_service_account = "service-${data.google_project.project.number}@dataflow-service-producer-prod.iam.gserviceaccount.com"
   # If provided, set Dataflow worker to new user-managed service account;
   # otherwise, use Compute Engine default service account
   dataflow_worker_service_account = ((var.dataflow_worker_service_account != "")
@@ -71,6 +71,8 @@ locals {
 
   # Metrics scope for Monitoring dashboard defaults to project unless explicitly provided
   scoping_project = (var.scoping_project != "") ? var.scoping_project : var.project
+
+  token_secret_id = "projects/${var.project}/secrets/${var.secret_name}/versions/${var.secret_version}"
 }
 
 resource "google_pubsub_topic" "dataflow_input_pubsub_topic" {
@@ -91,22 +93,28 @@ resource "google_pubsub_subscription" "dataflow_input_pubsub_subscription" {
   }
 }
 
-resource "google_logging_project_sink" "project_log_sink" {
-  name = local.project_log_sink_name
-  destination = "pubsub.googleapis.com/projects/${var.project}/topics/${google_pubsub_topic.dataflow_input_pubsub_topic.name}"
-  filter = var.log_filter
+#resource "google_logging_project_sink" "project_log_sink" {
+#  name = local.project_log_sink_name
+#  destination = "pubsub.googleapis.com/projects/${var.project}/topics/${google_pubsub_topic.dataflow_input_pubsub_topic.name}"
+#  filter = var.log_filter
+#
+#  unique_writer_identity = true
+#}
 
-  unique_writer_identity = true
+resource "google_logging_folder_sink" "folder_log_sink" {
+  name        = local.project_log_sink_name
+  destination = "pubsub.googleapis.com/projects/${var.project}/topics/${google_pubsub_topic.dataflow_input_pubsub_topic.name}"
+  folder      = "folders/${var.folder_id}"
+  filter = var.log_filter
+  include_children = "true"
 }
 
-# resource "google_logging_organization_sink" "organization_log_sink" {
-#   name = local.organization_log_sink_name
-#   org_id = "ORGANIZATION_ID"
-#   destination = "pubsub.googleapis.com/projects/${var.project}/topics/${google_pubsub_topic.dataflow_input_pubsub_topic.name}"
-#   filter = var.log_filter
-#
-#   include_children = "true"
-# }
+ resource "google_logging_organization_sink" "organization_log_sink" {
+   name = local.organization_log_sink_name
+   org_id = var.org_id
+   destination = "pubsub.googleapis.com/projects/${var.project}/topics/${google_pubsub_topic.dataflow_input_pubsub_topic.name}"
+   filter = var.log_filter
+ }
 
 output "dataflow_job_id" {
     value = google_dataflow_job.dataflow_job.job_id
